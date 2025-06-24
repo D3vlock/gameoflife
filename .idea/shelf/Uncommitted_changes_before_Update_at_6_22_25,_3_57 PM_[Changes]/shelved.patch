@@ -1,0 +1,429 @@
+Index: src/main/java/be/devlock/gameoflife/Runner.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package be.devlock.gameoflife;\n\nimport java.io.IOException;\nimport java.io.InputStreamReader;\nimport java.io.PrintStream;\n\npublic class Runner {\n    private static final int FRAME_RATE = 60;\n    private static final String RESET_CURSOR = \"\\u001b[0;0H\";\n    private static final String SAVE_CURSOR_POS = \"\\u001b[s\";\n    private static final String MOVE_CURSOR_OFF = \"\\u001b[5000;5000H\";\n    private static final String REQUEST_CURSOR_POS = \"\\u001b[6n\";\n    private static final String RESTORE_CURSOR_POS = \"\\u001b[u\";\n\n    private final GameField field;\n    private final PrintStream stream = System.out;\n    private volatile StringBuffer buffer = new StringBuffer(100);\n    private int cols = 0;\n    private int rows = 0;\n    private volatile boolean shouldQuit = false;\n\n\n    public Runner() throws IOException {\n        Thread.startVirtualThread(this::startDetermineTerminalSize);\n        Thread.startVirtualThread(this::listen);\n        field = new GameField(new TerminalSize(1000, 500));\n    }\n\n    private void startDetermineTerminalSize() {\n        Thread.startVirtualThread(() -> {\n            try {\n                Runtime.getRuntime().exec(new String[]{\"/bin/sh\", \"-c\", \"stty raw -echo </dev/tty\"}).waitFor();\n                while (this.rows == 0 || this.cols == 0) {\n                    determineTerminalSize();\n                    Thread.sleep(100);\n                }\n            } catch (InterruptedException | IOException e) {\n                e.printStackTrace();\n            }\n        });\n    }\n\n    private void listen() {\n        InputStreamReader reader = new InputStreamReader(System.in);\n        try {\n            int in;\n            while ((in = reader.read()) != -1) {\n                if (in == 113) {\n                    shouldQuit = true;\n                }\n                if (in >= 32) {\n                    buffer.append((char) in);\n                }\n            }\n        } catch (IOException e) {\n            e.printStackTrace();\n        }\n    }\n\n    private void determineTerminalSize() throws IOException, InterruptedException {\n        writeToTerminal(SAVE_CURSOR_POS);\n        writeToTerminal(MOVE_CURSOR_OFF);\n        writeToTerminal(REQUEST_CURSOR_POS);\n\n        synchronized (buffer) {\n            var output = buffer.toString();\n            if (output.split(\";\").length > 2) {\n                output = output.split(\"\\\\[\")[1];\n            }\n            if (output.split(\";\").length > 1) {\n                var rows = output.split(\";\")[0];\n                var cols = output.split(\";\")[1];\n                rows = rows.replaceAll(\"\\\\D\", \"\");\n                cols = cols.replaceAll(\"\\\\D\", \"\");\n                this.rows = Integer.valueOf(rows);\n                this.cols = Integer.valueOf(cols);\n                buffer = new StringBuffer(100);\n            }\n        }\n\n    }\n\n    private void writeToTerminal(byte[] output) {\n        try {\n            stream.write(output);\n        } catch (IOException e) {\n            e.printStackTrace();\n        }\n    }\n\n    private void writeToTerminal(String output) {\n        writeToTerminal(output.getBytes());\n    }\n\n    public void run() throws IOException, InterruptedException {\n        while (this.rows == 0 || this.cols == 0) {\n            Thread.sleep(100);\n        }\n        while (!shouldQuit) {\n            stream.flush();\n            writeToTerminal(RESET_CURSOR);\n            field.getFieldAsList(this.rows, this.cols).stream().forEach(this::writeToTerminal);\n            field.generate();\n            Thread.sleep(FRAME_RATE);\n        }\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/be/devlock/gameoflife/Runner.java b/src/main/java/be/devlock/gameoflife/Runner.java
+--- a/src/main/java/be/devlock/gameoflife/Runner.java	(revision 80477f8f5863c98b7ca9eca7a7498bae3f227bd9)
++++ b/src/main/java/be/devlock/gameoflife/Runner.java	(date 1720475896547)
+@@ -1,107 +1,28 @@
+ package be.devlock.gameoflife;
+ 
+ import java.io.IOException;
+-import java.io.InputStreamReader;
+-import java.io.PrintStream;
+ 
+ public class Runner {
+     private static final int FRAME_RATE = 60;
+     private static final String RESET_CURSOR = "\u001b[0;0H";
+-    private static final String SAVE_CURSOR_POS = "\u001b[s";
+-    private static final String MOVE_CURSOR_OFF = "\u001b[5000;5000H";
+-    private static final String REQUEST_CURSOR_POS = "\u001b[6n";
+-    private static final String RESTORE_CURSOR_POS = "\u001b[u";
+ 
++    private final TerminalScreen screen;
+     private final GameField field;
+-    private final PrintStream stream = System.out;
+-    private volatile StringBuffer buffer = new StringBuffer(100);
+-    private int cols = 0;
+-    private int rows = 0;
+-    private volatile boolean shouldQuit = false;
+ 
+ 
+     public Runner() throws IOException {
+-        Thread.startVirtualThread(this::startDetermineTerminalSize);
+-        Thread.startVirtualThread(this::listen);
+-        field = new GameField(new TerminalSize(1000, 500));
+-    }
+-
+-    private void startDetermineTerminalSize() {
+-        Thread.startVirtualThread(() -> {
+-            try {
+-                Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "stty raw -echo </dev/tty"}).waitFor();
+-                while (this.rows == 0 || this.cols == 0) {
+-                    determineTerminalSize();
+-                    Thread.sleep(100);
+-                }
+-            } catch (InterruptedException | IOException e) {
+-                e.printStackTrace();
+-            }
+-        });
+-    }
+-
+-    private void listen() {
+-        InputStreamReader reader = new InputStreamReader(System.in);
+-        try {
+-            int in;
+-            while ((in = reader.read()) != -1) {
+-                if (in == 113) {
+-                    shouldQuit = true;
+-                }
+-                if (in >= 32) {
+-                    buffer.append((char) in);
+-                }
+-            }
+-        } catch (IOException e) {
+-            e.printStackTrace();
+-        }
+-    }
+-
+-    private void determineTerminalSize() throws IOException, InterruptedException {
+-        writeToTerminal(SAVE_CURSOR_POS);
+-        writeToTerminal(MOVE_CURSOR_OFF);
+-        writeToTerminal(REQUEST_CURSOR_POS);
+-
+-        synchronized (buffer) {
+-            var output = buffer.toString();
+-            if (output.split(";").length > 2) {
+-                output = output.split("\\[")[1];
+-            }
+-            if (output.split(";").length > 1) {
+-                var rows = output.split(";")[0];
+-                var cols = output.split(";")[1];
+-                rows = rows.replaceAll("\\D", "");
+-                cols = cols.replaceAll("\\D", "");
+-                this.rows = Integer.valueOf(rows);
+-                this.cols = Integer.valueOf(cols);
+-                buffer = new StringBuffer(100);
+-            }
+-        }
+-
+-    }
+-
+-    private void writeToTerminal(byte[] output) {
+-        try {
+-            stream.write(output);
+-        } catch (IOException e) {
+-            e.printStackTrace();
+-        }
+-    }
+-
+-    private void writeToTerminal(String output) {
+-        writeToTerminal(output.getBytes());
++        screen = new TerminalScreen();
++        field = new GameField(new TerminalSize(screen.getRows(), screen.getCols()));
+     }
+ 
+     public void run() throws IOException, InterruptedException {
+-        while (this.rows == 0 || this.cols == 0) {
+-            Thread.sleep(100);
+-        }
+-        while (!shouldQuit) {
+-            stream.flush();
+-            writeToTerminal(RESET_CURSOR);
+-            field.getFieldAsList(this.rows, this.cols).stream().forEach(this::writeToTerminal);
+-            field.generate();
++        while (!screen.shouldQuit()) {
++            // System.out.println("run");
++            // screen.writeToTerminal(RESET_CURSOR);
++            // field.getFieldAsList(screen.getRows(), screen.getCols()).stream().forEach(s -> screen.writeToTerminal(s));
++            // field.generate();
+             Thread.sleep(FRAME_RATE);
+         }
++        screen.writeToTerminal(RESET_CURSOR);
+     }
+ }
+Index: src/main/java/be/devlock/gameoflife/GameField.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package be.devlock.gameoflife;\n\nimport java.util.ArrayList;\nimport java.util.List;\nimport java.util.Random;\nimport java.util.stream.IntStream;\n\npublic class GameField {\n    private static final String WHITE = \"\\u001B[37m\";\n    private static final String RED = \"\\u001B[31m\";\n    private static final String CYAN = \"\\u001b[36m\";\n    private static final String YELLOW = \"\\u001b[33m\";\n    private static final String GREEN = \"\\u001b[32m\";\n    String[][] colorField;\n    boolean[][] deletedField;\n    boolean[][] field;\n\n    GameField(TerminalSize terminalSize) {\n        field = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);\n        deletedField = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);\n        colorField = initialize2dStringArray(terminalSize.getRows(), terminalSize.getColumns());\n    }\n\n    boolean[][] initialize2dBoolArray(int rows, int cols, boolean randomize) {\n        var random = new Random();\n        var field = new boolean[rows][cols];\n        for (int x = 0; x < rows; x++) {\n            for (int y = 0; y < cols; y++) {\n                if (randomize) {\n                    field[x][y] = random.nextBoolean();\n                } else {\n                    field[x][y] = false;\n                }\n            }\n        }\n        return field;\n    }\n\n    String[][] initialize2dStringArray(int rows, int cols) {\n        var field = new String[rows][cols];\n        for (int x = 0; x < rows; x++) {\n            for (int y = 0; y < cols; y++) {\n                field[x][y] = \"\";\n            }\n        }\n        return field;\n    }\n\n    boolean[][] initialize2dBoolArray(int rows, int cols) {\n        return initialize2dBoolArray(rows, cols, false);\n    }\n\n    int countNeighbors(int x, int y) {\n        var count = 0;\n        for (int i = -1; i < 2; i++) {\n            for (int j = -1; j < 2; j++) {\n                if (i != 0 || j != 0) {\n                    count += field[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] ? 1 : 0;\n                }\n            }\n        }\n        return count;\n    }\n\n    void colorNeighbors(String[][] colorField, int x, int y, String color) {\n        for (int i = -1; i < 2; i++) {\n            for (int j = -1; j < 2; j++) {\n                colorField[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] = color;\n            }\n        }\n    }\n\n    void generate() {\n        var newField = initialize2dBoolArray(field.length, field[0].length);\n        var newDeletedField = initialize2dBoolArray(field.length, field[0].length);\n        var newColorField = initialize2dStringArray(field.length, field[0].length);\n        IntStream.range(0, field.length).parallel().forEach(x -> {\n            IntStream.range(0, field[0].length).parallel().forEach(y -> {\n                var aliveCount = countNeighbors(x, y);\n                if (field[x][y]) {\n                    if (aliveCount < 2 || aliveCount > 3) {\n                        if (aliveCount < 2) {\n                            colorNeighbors(newColorField, x, y, RED);\n                        } else {\n                            colorNeighbors(newColorField, x, y, YELLOW);\n                        }\n                        newColorField[x][y] = RED;\n                        newDeletedField[x][y] = true;\n                        newField[x][y] = false;\n                    } else {\n                        newColorField[x][y] = CYAN;\n                        newField[x][y] = field[x][y];\n                    }\n                } else {\n                    if (aliveCount == 3) {\n                        newColorField[x][y] = GREEN;\n                        newField[x][y] = true;\n                    } else {\n                        newColorField[x][y] = CYAN;\n                        newField[x][y] = field[x][y];\n                    }\n                }\n            });\n        });\n        field = newField;\n        deletedField = newDeletedField;\n        colorField = newColorField;\n    }\n\n    List<String> getFieldAsList(int rowz, int cols) {\n        List<String> rows = new ArrayList<>();\n        for (int x = 0; x < rowz - 1; x++) {\n            StringBuilder line = new StringBuilder();\n            line.append('\\r');\n            for (int y = 0; y < cols - 1; y++) {\n                line.append(colorField[x][y]);\n                if (field[x][y]) {\n                    // line.append('▮');\n                    line.append('#');\n                } else if (deletedField[x][y]) {\n                    line.append(deletedField[x][y] ? '.' : ' ');\n                } else {\n                    line.append(' ');\n                }\n            }\n            line.append('\\n');\n            rows.add(line.toString());\n        }\n        return rows;\n    }\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/src/main/java/be/devlock/gameoflife/GameField.java b/src/main/java/be/devlock/gameoflife/GameField.java
+--- a/src/main/java/be/devlock/gameoflife/GameField.java	(revision 80477f8f5863c98b7ca9eca7a7498bae3f227bd9)
++++ b/src/main/java/be/devlock/gameoflife/GameField.java	(date 1746984842292)
+@@ -1,131 +1,134 @@
+ package be.devlock.gameoflife;
+ 
+ import java.util.ArrayList;
++import java.util.Arrays;
+ import java.util.List;
+ import java.util.Random;
+ import java.util.stream.IntStream;
+ 
+ public class GameField {
+-    private static final String WHITE = "\u001B[37m";
+-    private static final String RED = "\u001B[31m";
+-    private static final String CYAN = "\u001b[36m";
+-    private static final String YELLOW = "\u001b[33m";
+-    private static final String GREEN = "\u001b[32m";
+-    String[][] colorField;
+-    boolean[][] deletedField;
+-    boolean[][] field;
++  private static final String WHITE = "\u001B[37m";
++  private static final String RED = "\u001B[31m";
++  private static final String CYAN = "\u001b[36m";
++  private static final String YELLOW = "\u001b[33m";
++  private static final String GREEN = "\u001b[32m";
++  String[][] colorField;
++  boolean[][] deletedField;
++  boolean[][] field;
+ 
+-    GameField(TerminalSize terminalSize) {
+-        field = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);
+-        deletedField = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);
+-        colorField = initialize2dStringArray(terminalSize.getRows(), terminalSize.getColumns());
+-    }
++  GameField(TerminalSize terminalSize) {
++    field = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);
++    deletedField = initialize2dBoolArray(terminalSize.getRows(), terminalSize.getColumns(), true);
++    colorField = initialize2dStringArray(terminalSize.getRows(), terminalSize.getColumns());
++  }
+ 
+-    boolean[][] initialize2dBoolArray(int rows, int cols, boolean randomize) {
+-        var random = new Random();
+-        var field = new boolean[rows][cols];
+-        for (int x = 0; x < rows; x++) {
+-            for (int y = 0; y < cols; y++) {
+-                if (randomize) {
+-                    field[x][y] = random.nextBoolean();
+-                } else {
+-                    field[x][y] = false;
+-                }
+-            }
+-        }
+-        return field;
+-    }
++  boolean[][] initialize2dBoolArray(int rows, int cols, boolean randomize) {
++    var list = Arrays.asList();
++    var random = new Random();
++    var field = new boolean[rows][cols];
++    for (int x = 0; x < rows; x++) {
++      for (int y = 0; y < cols; y++) {
++        if (randomize) {
++          field[x][y] = random.nextBoolean();
++        } else {
++          field[x][y] = false;
++        }
++      }
++    }
++    return field;
++  }
+ 
+-    String[][] initialize2dStringArray(int rows, int cols) {
+-        var field = new String[rows][cols];
+-        for (int x = 0; x < rows; x++) {
+-            for (int y = 0; y < cols; y++) {
+-                field[x][y] = "";
+-            }
+-        }
+-        return field;
+-    }
++  String[][] initialize2dStringArray(int rows, int cols) {
++    var field = new String[rows][cols];
++    for (int x = 0; x < rows; x++) {
++      for (int y = 0; y < cols; y++) {
++        field[x][y] = "";
++      }
++    }
++    return field;
++  }
+ 
+-    boolean[][] initialize2dBoolArray(int rows, int cols) {
+-        return initialize2dBoolArray(rows, cols, false);
+-    }
++  boolean[][] initialize2dBoolArray(int rows, int cols) {
++    return initialize2dBoolArray(rows, cols, false);
++  }
+ 
+-    int countNeighbors(int x, int y) {
+-        var count = 0;
+-        for (int i = -1; i < 2; i++) {
+-            for (int j = -1; j < 2; j++) {
+-                if (i != 0 || j != 0) {
+-                    count += field[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] ? 1 : 0;
+-                }
+-            }
+-        }
+-        return count;
+-    }
++  int countNeighbors(int x, int y) {
++    var count = 0;
++    for (int i = -1; i < 2; i++) {
++      for (int j = -1; j < 2; j++) {
++        if (i != 0 || j != 0) {
++          count += field[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] ? 1
++              : 0;
++        }
++      }
++    }
++    return count;
++  }
+ 
+-    void colorNeighbors(String[][] colorField, int x, int y, String color) {
+-        for (int i = -1; i < 2; i++) {
+-            for (int j = -1; j < 2; j++) {
+-                colorField[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] = color;
+-            }
+-        }
+-    }
++  void colorNeighbors(String[][] colorField, int x, int y, String color) {
++    for (int i = -1; i < 2; i++) {
++      for (int j = -1; j < 2; j++) {
++        colorField[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] = color;
++      }
++    }
++  }
+ 
+-    void generate() {
+-        var newField = initialize2dBoolArray(field.length, field[0].length);
+-        var newDeletedField = initialize2dBoolArray(field.length, field[0].length);
+-        var newColorField = initialize2dStringArray(field.length, field[0].length);
+-        IntStream.range(0, field.length).parallel().forEach(x -> {
+-            IntStream.range(0, field[0].length).parallel().forEach(y -> {
+-                var aliveCount = countNeighbors(x, y);
+-                if (field[x][y]) {
+-                    if (aliveCount < 2 || aliveCount > 3) {
+-                        if (aliveCount < 2) {
+-                            colorNeighbors(newColorField, x, y, RED);
+-                        } else {
+-                            colorNeighbors(newColorField, x, y, YELLOW);
+-                        }
+-                        newColorField[x][y] = RED;
+-                        newDeletedField[x][y] = true;
+-                        newField[x][y] = false;
+-                    } else {
+-                        newColorField[x][y] = CYAN;
+-                        newField[x][y] = field[x][y];
+-                    }
+-                } else {
+-                    if (aliveCount == 3) {
+-                        newColorField[x][y] = GREEN;
+-                        newField[x][y] = true;
+-                    } else {
+-                        newColorField[x][y] = CYAN;
+-                        newField[x][y] = field[x][y];
+-                    }
+-                }
+-            });
+-        });
+-        field = newField;
+-        deletedField = newDeletedField;
+-        colorField = newColorField;
+-    }
++  void generate() {
++    var newField = initialize2dBoolArray(field.length, field[0].length);
++    var newDeletedField = initialize2dBoolArray(field.length, field[0].length);
++    var newColorField = initialize2dStringArray(field.length, field[0].length);
++    IntStream.range(0, field.length).parallel().forEach(x -> {
++      IntStream.range(0, field[0].length).parallel().forEach(y -> {
++        var aliveCount = countNeighbors(x, y);
++        if (field[x][y]) {
++          if (aliveCount < 2 || aliveCount > 3) {
++            if (aliveCount < 2) {
++              colorNeighbors(newColorField, x, y, RED);
++            } else {
++              colorNeighbors(newColorField, x, y, YELLOW);
++            }
++            newColorField[x][y] = RED;
++            newDeletedField[x][y] = true;
++            newField[x][y] = false;
++          } else {
++            newColorField[x][y] = CYAN;
++            newField[x][y] = field[x][y];
++          }
++        } else {
++          if (aliveCount == 3) {
++            newColorField[x][y] = GREEN;
++            newField[x][y] = true;
++          } else {
++            newColorField[x][y] = CYAN;
++            newField[x][y] = field[x][y];
++          }
++        }
++      });
++    });
++    field = newField;
++    deletedField = newDeletedField;
++    colorField = newColorField;
++  }
+ 
+-    List<String> getFieldAsList(int rowz, int cols) {
+-        List<String> rows = new ArrayList<>();
+-        for (int x = 0; x < rowz - 1; x++) {
+-            StringBuilder line = new StringBuilder();
+-            line.append('\r');
+-            for (int y = 0; y < cols - 1; y++) {
+-                line.append(colorField[x][y]);
+-                if (field[x][y]) {
+-                    // line.append('▮');
+-                    line.append('#');
+-                } else if (deletedField[x][y]) {
+-                    line.append(deletedField[x][y] ? '.' : ' ');
+-                } else {
+-                    line.append(' ');
+-                }
+-            }
+-            line.append('\n');
+-            rows.add(line.toString());
+-        }
+-        return rows;
+-    }
++  List<String> getFieldAsList(int rowz, int cols) {
++    List<String> rows = new ArrayList<>();
++    for (int x = 0; x < rowz - 1; x++) {
++      StringBuilder line = new StringBuilder();
++      line.append('\r');
++      for (int y = 0; y < cols - 1; y++) {
++        line.append(colorField[x][y]);
++        if (field[x][y]) {
++          // line.append('▮');
++          line.append('#');
++        } else if (deletedField[x][y]) {
++          line.append(deletedField[x][y] ? '.' : ' ');
++        } else {
++          line.append(' ');
++        }
++      }
++      line.append('\n');
++      rows.add(line.toString());
++    }
++    return rows;
++  }
+ }
+Index: bin/main/application.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>spring.application.name=Streamer\n
+===================================================================
+diff --git a/bin/main/application.properties b/bin/main/application.properties
+--- a/bin/main/application.properties	(revision 80477f8f5863c98b7ca9eca7a7498bae3f227bd9)
++++ b/bin/main/application.properties	(date 1720363091049)
+@@ -1,1 +1,1 @@
+-spring.application.name=Streamer
++spring.application.name=gameoflife
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project version=\"4\">\n  <component name=\"ExternalStorageConfigurationManager\" enabled=\"true\" />\n  <component name=\"ProjectRootManager\" version=\"2\" languageLevel=\"JDK_21\" default=\"true\" project-jdk-name=\"21\" project-jdk-type=\"JavaSDK\" />\n</project>
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+--- a/.idea/misc.xml	(revision 80477f8f5863c98b7ca9eca7a7498bae3f227bd9)
++++ b/.idea/misc.xml	(date 1750600577206)
+@@ -1,5 +1,8 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <project version="4">
+   <component name="ExternalStorageConfigurationManager" enabled="true" />
++  <component name="FrameworkDetectionExcludesConfiguration">
++    <file type="web" url="file://$PROJECT_DIR$" />
++  </component>
+   <component name="ProjectRootManager" version="2" languageLevel="JDK_21" default="true" project-jdk-name="21" project-jdk-type="JavaSDK" />
+ </project>
+\ No newline at end of file
+Index: .settings/org.eclipse.buildship.core.prefs
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>arguments=--init-script /home/sven/.local/share/nvim/mason/packages/jdtls/configuration/org.eclipse.osgi/55/0/.cp/gradle/init/init.gradle\nauto.sync=false\nbuild.scans.enabled=false\nconnection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)\nconnection.project.dir=\neclipse.preferences.version=1\ngradle.user.home=/home/sven/.gradle\njava.home=/home/sven/.sdkman/candidates/java/21.0.2-tem\njvm.arguments=\noffline.mode=false\noverride.workspace.settings=true\nshow.console.view=true\nshow.executions.view=true\n
+===================================================================
+diff --git a/.settings/org.eclipse.buildship.core.prefs b/.settings/org.eclipse.buildship.core.prefs
+--- a/.settings/org.eclipse.buildship.core.prefs	(revision 80477f8f5863c98b7ca9eca7a7498bae3f227bd9)
++++ b/.settings/org.eclipse.buildship.core.prefs	(date 1746984781506)
+@@ -1,4 +1,4 @@
+-arguments=--init-script /home/sven/.local/share/nvim/mason/packages/jdtls/configuration/org.eclipse.osgi/55/0/.cp/gradle/init/init.gradle
++arguments=--init-script /home/sven/.cache/jdtls/config/org.eclipse.osgi/58/0/.cp/gradle/init/init.gradle
+ auto.sync=false
+ build.scans.enabled=false
+ connection.gradle.distribution=GRADLE_DISTRIBUTION(WRAPPER)
