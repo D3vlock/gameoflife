@@ -1,6 +1,7 @@
 import java.util.List;
 import java.util.Random;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.ArrayList;
 
 public class GameField {
@@ -8,11 +9,14 @@ public class GameField {
   private static final String CYAN = "\u001b[36m";
   private static final String YELLOW = "\u001b[33m";
   private static final String GREEN = "\u001b[32m";
-  String[][] colorField;
-  boolean[][] deletedField;
-  boolean[][] field;
+  private static String[][] colorField;
+  private static boolean[][] deletedField;
+  private static boolean[][] field;
 
   public record TerminalSize(int rows, int columns) {
+    public static TerminalSize createDefault() {
+      return new TerminalSize(1000, 500);
+    }
   }
 
   GameField(TerminalSize terminalSize) {
@@ -21,7 +25,7 @@ public class GameField {
     colorField = initialize2dStringArray(terminalSize.rows(), terminalSize.columns());
   }
 
-  boolean[][] initialize2dBoolArray(int rows, int cols, boolean randomize) {
+  private boolean[][] initialize2dBoolArray(int rows, int cols, boolean randomize) {
     var random = new Random();
     var field = new boolean[rows][cols];
     for (int x = 0; x < rows; x++) {
@@ -36,7 +40,7 @@ public class GameField {
     return field;
   }
 
-  String[][] initialize2dStringArray(int rows, int cols) {
+  private String[][] initialize2dStringArray(int rows, int cols) {
     var field = new String[rows][cols];
     for (int x = 0; x < rows; x++) {
       for (int y = 0; y < cols; y++) {
@@ -46,11 +50,11 @@ public class GameField {
     return field;
   }
 
-  boolean[][] initialize2dBoolArray(int rows, int cols) {
+  private boolean[][] initialize2dBoolArray(int rows, int cols) {
     return initialize2dBoolArray(rows, cols, false);
   }
 
-  int countNeighbors(int x, int y) {
+  private int countNeighbors(int x, int y) {
     var count = 0;
     for (int i = -1; i < 2; i++) {
       for (int j = -1; j < 2; j++) {
@@ -63,7 +67,7 @@ public class GameField {
     return count;
   }
 
-  void colorNeighbors(String[][] colorField, int x, int y, String color) {
+  private void colorNeighbors(String[][] colorField, int x, int y, String color) {
     for (int i = -1; i < 2; i++) {
       for (int j = -1; j < 2; j++) {
         colorField[((x + field.length + i) % field.length)][((y + field[0].length + j) % field[0].length)] = color;
@@ -71,7 +75,7 @@ public class GameField {
     }
   }
 
-  void generate() {
+  private void generate() {
     var newField = initialize2dBoolArray(field.length, field[0].length);
     var newDeletedField = initialize2dBoolArray(field.length, field[0].length);
     var newColorField = initialize2dStringArray(field.length, field[0].length);
@@ -108,7 +112,8 @@ public class GameField {
     colorField = newColorField;
   }
 
-  List<String> getFieldAsList(int rowz, int cols) {
+  Stream<String> getFieldAsList(int rowz, int cols) {
+    generate();
     List<String> rows = new ArrayList<>();
     for (int x = 0; x < rowz - 1; x++) {
       StringBuilder line = new StringBuilder();
@@ -127,6 +132,6 @@ public class GameField {
       line.append('\n');
       rows.add(line.toString());
     }
-    return rows;
+    return rows.stream();
   }
 }
