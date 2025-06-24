@@ -3,5 +3,5 @@
 ### Java version
 24
 
-
-just run `java GameOfLife.java`
+### just run 
+`java GameOfLife.java`
