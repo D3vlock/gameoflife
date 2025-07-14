@@ -17,7 +17,7 @@ jobs:
           fetch_all_tags: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: true
-          tag_prefix: "v"
+          tag_prefix: ""
 
       - name: Generate versions
         id: generate_versions
@@ -39,6 +39,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ steps.generate_versions.outputs.new_version }}
+          tag_prefix: ""
 
       - uses: release-drafter/release-drafter@master
         with:
