@@ -39,6 +39,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           custom_tag: ${{ steps.generate_versions.outputs.new_version }}
+          tag_prefix: ""
 
       - uses: release-drafter/release-drafter@master
         with:
