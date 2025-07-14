@@ -10,5 +10,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: release-drafter/release-drafter@master
+        with:
+          name: 1.0.0
+          tag: 1.0.0
+          publish: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
