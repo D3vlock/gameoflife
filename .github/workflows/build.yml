@@ -10,8 +10,8 @@ jobs:
   make_release:
     runs-on: self-hosted
     steps:
-      - name: Calc version and push tag
-        id: calc_version
+      - name: Calc version
+        id: calc_release_name
         uses: mathieudutour/github-tag-action@v6.2
         with:
           fetch_all_tags: true
@@ -19,15 +19,24 @@ jobs:
           dry_run: true
           tag_prefix: ""
 
+      - name: Calc tag
+        id: calc_tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          fetch_all_tags: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          tag_prefix: "v"
+
       - name: Generate versions
         id: generate_versions
         run: |
           TAGSAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | cut -c 1-100)
           echo "latest_version=${TAGSAFE_BRANCH_NAME}-latest" >> $GITHUB_OUTPUT
 
-          LATEST_TAG=${{steps.calc_version.outputs.new_version}}
+          LATEST_TAG=${{steps.calc_tag_version.outputs.new_version}}
           SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
-          NEW_VERSION="$LATEST_TAG-$SHORT_SHA"
+          NEW_VERSION="v$LATEST_TAG-$SHORT_SHA"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
         env:
@@ -35,7 +44,7 @@ jobs:
 
       - uses: release-drafter/release-drafter@master
         with:
-          name: ${{ steps.calc_version.outputs.new_tag }}
+          name: ${{ steps.calc_release_name.outputs.new_tag }}
           tag: ${{ steps.generate_versions.outputs.new_version }}
           publish: ${{ ((github.head_ref || github.ref_name) == 'develop') || ((github.head_ref || github.ref_name) == 'master') }}
           prerelease: ${{ (github.head_ref || github.ref_name) != 'master' }}
