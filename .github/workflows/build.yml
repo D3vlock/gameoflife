@@ -33,13 +33,6 @@ jobs:
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          fetch_all_tags: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
       - uses: release-drafter/release-drafter@master
         with:
           name: ${{ steps.calc_version.outputs.new_tag }}
