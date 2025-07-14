@@ -19,17 +19,24 @@ jobs:
           dry_run: true
           tag_prefix: ""
 
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          fetch_all_tags: true
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate versions
+        id: generate_versions
+        run: |
+          TAGSAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | cut -c 1-100)
+          echo "latest_version=${TAGSAFE_BRANCH_NAME}-latest" >> $GITHUB_OUTPUT
+
+          LATEST_TAG=${{steps.calc_version.outputs.new_version}}
+          SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
+          NEW_VERSION="$LATEST_TAG-$SHORT_SHA"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
       - uses: release-drafter/release-drafter@master
         with:
           name: ${{ steps.calc_version.outputs.new_tag }}
-          tag: ${{ steps.tag_version.outputs.new_tag }}
+          tag: ${{ steps.generate_versions.outputs.new_version }}
           publish: ${{ ((github.head_ref || github.ref_name) == 'develop') || ((github.head_ref || github.ref_name) == 'master') }}
           prerelease: ${{ (github.head_ref || github.ref_name) != 'master' }}
           draft: ${{ github.ref_name != 'master' }}
