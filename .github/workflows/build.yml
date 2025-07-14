@@ -39,6 +39,7 @@ jobs:
       - uses: release-drafter/release-drafter@master
         with:
           name: ${{ steps.generate_versions.outputs.release }}
+          version: ${{ steps.generate_versions.outputs.release }}
           tag: ${{ steps.generate_versions.outputs.new_tag }}
           publish: ${{ ((github.head_ref || github.ref_name) == 'develop') || ((github.head_ref || github.ref_name) == 'master') }}
           prerelease: ${{ (github.head_ref || github.ref_name) != 'master' }}
