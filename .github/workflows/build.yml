@@ -1,0 +1,14 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - test
+
+jobs:
+  make_release:
+    runs-on: self-hosted
+    steps:
+      - uses: release-drafter/release-drafter@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
