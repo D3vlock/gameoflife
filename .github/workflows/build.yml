@@ -26,13 +26,12 @@ jobs:
           echo "latest_version=${TAGSAFE_BRANCH_NAME}-latest" >> $GITHUB_OUTPUT
 
           LATEST_TAG=${{steps.calc_tag_version.outputs.new_version}}
-          LATEST_TAG=$(echo $LATEST_TAG | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
-          LATEST_VERSION="${LATEST_TAG:1}"
+          RELEASE_VERSION=$(echo $LATEST_TAG | grep -E '^[0-9]+\.[0-9]+\.[0-9]+')
           SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
           NEW_VERSION="v$LATEST_TAG-$SHORT_SHA"
-          echo "release=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "release=$RELEASE_VERSION" >> $GITHUB_OUTPUT
           echo "new_tag=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "release=$LATEST_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "release=$RELEASE_VERSION" >> $GITHUB_STEP_SUMMARY
           echo "new_tag=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
