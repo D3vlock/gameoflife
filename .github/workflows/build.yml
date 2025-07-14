@@ -18,7 +18,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: true
           default_prerelease_bump: false
-          tag_prefix: "v"
+          tag_prefix: ""
 
       - name: Calc tag
         id: calc_tag_version
