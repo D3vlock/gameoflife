@@ -25,7 +25,7 @@ jobs:
           TAGSAFE_BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9-]/-/g' | cut -c 1-100)
           echo "latest_version=${TAGSAFE_BRANCH_NAME}-latest" >> $GITHUB_OUTPUT
 
-          LATEST_TAG=${{steps.calc.outputs.new_version}}
+          LATEST_TAG=${{steps.calc_version.outputs.new_version}}
           SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
           NEW_VERSION="$LATEST_TAG-$SHORT_SHA"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
