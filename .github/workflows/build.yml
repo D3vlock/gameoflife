@@ -17,7 +17,7 @@ jobs:
           fetch_all_tags: true
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: true
-          tag_prefix: "v"
+          tag_prefix: ""
 
       - name: Generate versions
         id: generate_versions
