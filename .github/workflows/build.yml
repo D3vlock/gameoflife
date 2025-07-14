@@ -26,21 +26,24 @@ jobs:
           echo "latest_version=${TAGSAFE_BRANCH_NAME}-latest" >> $GITHUB_OUTPUT
 
           LATEST_TAG=${{steps.calc_tag_version.outputs.new_version}}
-          RELEASE_VERSION=$(echo $LATEST_TAG | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+')
           SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
           NEW_VERSION="v$LATEST_TAG-$SHORT_SHA"
-          echo "release=$RELEASE_VERSION" >> $GITHUB_OUTPUT
-          echo "new_tag=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "release=$RELEASE_VERSION" >> $GITHUB_STEP_SUMMARY
-          echo "new_tag=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.generate_versions.outputs.new_version }}
+
       - uses: release-drafter/release-drafter@master
         with:
-          name: ${{ steps.generate_versions.outputs.release }}
-          version: ${{ steps.generate_versions.outputs.release }}
-          tag: ${{ steps.generate_versions.outputs.new_tag }}
+          name: ${{ steps.calc_release_version.outputs.new_tag }}
+          tag: ${{ steps.generate_versions.outputs.new_version }}
           publish: ${{ ((github.head_ref || github.ref_name) == 'develop') || ((github.head_ref || github.ref_name) == 'master') }}
           prerelease: ${{ (github.head_ref || github.ref_name) != 'master' }}
           draft: ${{ github.ref_name != 'master' }}
