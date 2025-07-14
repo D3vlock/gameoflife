@@ -28,7 +28,7 @@ jobs:
           LATEST_TAG=${{steps.calc_tag_version.outputs.new_version}}
           LATEST_VERSION=v$LATEST_TAG
           SHORT_SHA=$(git rev-parse --short "${{ github.sha }}")
-          NEW_VERSION="v$LATEST_TAG-$SHORT_SHA"
+          NEW_VERSION="d$LATEST_TAG-$SHORT_SHA"
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_STEP_SUMMARY
